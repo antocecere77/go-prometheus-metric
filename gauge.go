@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"fmt"
 	"log"
+	"time"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -11,9 +12,9 @@ import (
 )
 
 var
-	REQUEST_COUNT = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "go_app_requests_count",
-		Help: "Total App HTTP Requests count.",
+	REQUEST_INPROGRESS = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "go_app_requests_inprogress",
+		Help: "Number of application requests in progress",
 	})
 
 func main() {
@@ -24,12 +25,14 @@ func main() {
 func startMyApp() {
 	router := mux.NewRouter()
 	router.HandleFunc("/birthday/{name}", func(rw http.ResponseWriter, r *http.Request) {
+			REQUEST_INPROGRESS.Inc()
 			vars := mux.Vars(r)
 			name := vars["name"]
 			greetings := fmt.Sprintf("Happy Birthday %s :)", name)
+			time.Sleep(5 * time.Second)
 			rw.Write([]byte(greetings))
 
-			REQUEST_COUNT.Inc()
+			REQUEST_INPROGRESS.Dec()
 	}).Methods("GET")
 
 	log.Println("Starting the application server...")
